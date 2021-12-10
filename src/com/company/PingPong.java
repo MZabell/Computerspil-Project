@@ -4,9 +4,11 @@ import javax.swing.JFrame;
 import java.awt.Rectangle;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.util.concurrent.ThreadLocalRandom;
 
-public class PingPong extends JFrame {
+public class PingPong extends JFrame implements SerialConnectionHandler.SerialListener {
 
     private static final int REFRESH_RATE = 60;
 
@@ -18,17 +20,28 @@ public class PingPong extends JFrame {
     private int overShoot;
     private int diffOverShoot;
     private int diffCount = 2;
+    private long lastTime;
 
     public PingPong() {
         player1 = new Player();
         player2 = new Player();
         ball = new Ball();
+        SerialConnectionHandler serialHandler = new SerialConnectionHandler(this);
         Score scoreP1 = new Score();
         Score scoreP2 = new Score();
 
         setTitle("Ping Pong");
 
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                if (serialHandler.isConnected())
+                    serialHandler.stopSerial();
+                else
+                    return;
+            }
+        });
         setVisible(true);
         Menu menu = new Menu();
         getContentPane().add(menu);
@@ -236,6 +249,13 @@ public class PingPong extends JFrame {
                 player2.setUpPressed(false);
             }
         }
+    }
+
+    @Override
+    public void onValueRead(float value) {
+        player1.setY((int) (value * 100.0));
+        System.out.println("Time elapsed: " + (System.currentTimeMillis() - lastTime));
+        lastTime = System.currentTimeMillis();
     }
 
     private class KeyManager implements KeyListener {
